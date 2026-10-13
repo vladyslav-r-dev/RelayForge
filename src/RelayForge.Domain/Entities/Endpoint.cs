@@ -4,7 +4,7 @@ namespace RelayForge.Domain.Entities
     {
         public Guid Id { get; private set; }
         public DateTimeOffset CreatedAt { get; private set; }
-        public string Url { get; private set; }
+        public string Url { get; set; }
         public bool IsActive { get; private set; }
 
         public Endpoint(string url)
