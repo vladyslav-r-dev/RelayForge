@@ -1,9 +1,10 @@
 using RelayForge.Application.Interfaces;
 
 namespace RelayForge.Application.UseCases;
-public class DeactivateEndpointUseCase(IEndpointRepository endpointRepository)
+public class DeactivateEndpointUseCase(IEndpointRepository endpointRepository, IUnitOfWork unitOfWork)
 {
     private readonly IEndpointRepository _endpointRepository = endpointRepository;
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
     public async Task ExecuteAsync(Guid endpointId, CancellationToken cancellationToken)
     {
@@ -13,7 +14,6 @@ public class DeactivateEndpointUseCase(IEndpointRepository endpointRepository)
             throw new KeyNotFoundException($"Endpoint {endpointId} not found.");
 
         endpoint.Deactivate();
-        
-        await _endpointRepository.UpdateAsync(endpoint, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

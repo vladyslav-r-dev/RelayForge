@@ -4,5 +4,6 @@ namespace RelayForge.Application.Interfaces;
 
 public interface IWebhookEventRepository
 {
-    Task AddAsync(WebhookEvent webhookEvent, CancellationToken cancellationToken);
+    void Add(WebhookEvent webhookEvent);
+    Task<WebhookEvent?> GetByIdAsync(Guid id, CancellationToken cancellationToken);
 }

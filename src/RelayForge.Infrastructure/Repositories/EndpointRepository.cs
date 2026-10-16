@@ -9,20 +9,14 @@ namespace RelayForge.Infrastructure.Repositories
     {
         private readonly RelayForgeDbContext _context = context;
 
-        public Task AddAsync(Endpoint endpoint, CancellationToken cancellationToken)
+        public void Add(Endpoint endpoint, CancellationToken cancellationToken)
         {
             _context.Endpoints.Add(endpoint);
-            return _context.SaveChangesAsync(cancellationToken);
         }
 
         public Task<Endpoint?> GetByIdAsync(Guid id, CancellationToken cancellationToken)
         {
             return _context.Endpoints.FindAsync(new object[] { id }, cancellationToken).AsTask();
-        }
-
-        public Task UpdateAsync(Endpoint endpoint, CancellationToken cancellationToken)
-        {
-            return _context.SaveChangesAsync(cancellationToken);
         }
 
         public async Task<IEnumerable<Endpoint>> GetActiveAsync(

@@ -19,7 +19,7 @@ public class DeliveryConfiguration : IEntityTypeConfiguration<Delivery>
         builder.Property(d => d.CreatedAt).IsRequired();
 
         builder.HasOne<WebhookEvent>()
-            .WithMany()
+            .WithMany(e => e.Deliveries)
             .HasForeignKey(d => d.EventId)
             .OnDelete(DeleteBehavior.Restrict);
 

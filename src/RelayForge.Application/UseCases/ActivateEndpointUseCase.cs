@@ -1,9 +1,10 @@
 using RelayForge.Application.Interfaces;
 
 namespace RelayForge.Application.UseCases;
-public class ActivateEndpointUseCase(IEndpointRepository endpointRepository)
+public class ActivateEndpointUseCase(IEndpointRepository endpointRepository, IUnitOfWork unitOfWork)
 {
     private readonly IEndpointRepository _endpointRepository = endpointRepository;
+    private readonly IUnitOfWork _unitOfWork = unitOfWork;
 
     public async Task ExecuteAsync(Guid endpointId, CancellationToken cancellationToken)
     {
@@ -14,6 +15,6 @@ public class ActivateEndpointUseCase(IEndpointRepository endpointRepository)
 
         endpoint.Activate();
 
-        await _endpointRepository.UpdateAsync(endpoint, cancellationToken);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }
