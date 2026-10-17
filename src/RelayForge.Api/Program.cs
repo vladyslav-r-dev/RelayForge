@@ -1,6 +1,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using RelayForge.Api.Exceptions;
+using RelayForge.Api.Middleware;
 using RelayForge.Application.DTOs;
 using RelayForge.Application.Interfaces;
 using RelayForge.Application.UseCases;
@@ -34,6 +35,7 @@ builder.Services.AddScoped<GetEventDeliveriesUseCase>();
 var app = builder.Build();
 
 app.UseExceptionHandler();
+app.UseMiddleware<ApiKeyMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

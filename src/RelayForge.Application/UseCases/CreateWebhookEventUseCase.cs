@@ -1,16 +1,18 @@
 using RelayForge.Application.Interfaces;
 using RelayForge.Application.DTOs;
 using RelayForge.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace RelayForge.Application.UseCases;
 
 public class CreateWebhookEventUseCase(IWebhookEventRepository webhookEventRepository, 
-IDeliveryRepository deliveryRepository, IEndpointRepository endpointRepository, IUnitOfWork unitOfWork)
+IDeliveryRepository deliveryRepository, IEndpointRepository endpointRepository, IUnitOfWork unitOfWork, ILogger<CreateWebhookEventUseCase> logger)
 {
     private readonly IWebhookEventRepository _webhookEventRepository = webhookEventRepository;
     private readonly IDeliveryRepository _deliveryRepository = deliveryRepository;
     private readonly IEndpointRepository _endpointRepository = endpointRepository;
     private readonly IUnitOfWork _unitOfWork = unitOfWork;
+    private readonly ILogger<CreateWebhookEventUseCase> _logger = logger;
 
     public async Task<Guid> ExecuteAsync(
     CreateWebhookEventRequest request,
@@ -32,6 +34,9 @@ IDeliveryRepository deliveryRepository, IEndpointRepository endpointRepository, 
         _deliveryRepository.Add(deliveries, cancellationToken);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
+        _logger.LogInformation(
+        "Webhook event {EventId} created",
+        webhookEvent.Id);
 
         return webhookEvent.Id;
     }
