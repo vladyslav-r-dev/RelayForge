@@ -1,5 +1,6 @@
 
 using Microsoft.EntityFrameworkCore;
+using RelayForge.Api.BackgroundServices;
 using RelayForge.Api.Exceptions;
 using RelayForge.Api.Middleware;
 using RelayForge.Application.DTOs;
@@ -14,6 +15,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddHttpClient();
 
 builder.Services.AddDbContext<RelayForgeDbContext>(options =>
     options.UseNpgsql(
@@ -31,6 +33,7 @@ builder.Services.AddScoped<DeactivateEndpointUseCase>();
 builder.Services.AddScoped<CreateWebhookEventUseCase>();
 builder.Services.AddScoped<GetWebhookEventUseCase>();
 builder.Services.AddScoped<GetEventDeliveriesUseCase>();
+builder.Services.AddHostedService<DeliveryWorker>();
 
 var app = builder.Build();
 

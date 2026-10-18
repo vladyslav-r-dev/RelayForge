@@ -1,4 +1,5 @@
 using RelayForge.Domain.Entities;
+using RelayForge.Domain.Enums;
 using RelayForge.Application.Interfaces;
 using RelayForge.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -19,6 +20,15 @@ public class DeliveryRepository(RelayForgeDbContext context) : IDeliveryReposito
         return await _context.Deliveries
             .Where(d => d.EventId == eventId)
             .AsNoTracking()
+            .ToListAsync(cancellationToken);
+    }
+
+    public async Task<IEnumerable<Delivery>> GetPendingAsync(CancellationToken cancellationToken)
+    {
+        return await _context.Deliveries
+            .Where(d => d.Status == DeliveryStatus.Pending)
+            .OrderBy(d => d.CreatedAt)
+            .Take(10)
             .ToListAsync(cancellationToken);
     }
 }
