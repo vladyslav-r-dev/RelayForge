@@ -1,16 +1,18 @@
 using RelayForge.Domain.Enums;
 
 namespace RelayForge.Domain.Entities;
+
 public class Delivery
 {
+    public const int MaxAttempts = 3;
     public Guid Id { get; private set; }
     public Guid EventId { get; private set; }
     public Guid EndpointId { get; private set; }
-    public DeliveryStatus Status { get;  set; }
+    public DeliveryStatus Status { get; private set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public int AttemptCount { get; private set; }
     public DateTimeOffset? NextAttemptAt { get; private set; }
-    
+
 
     public Delivery(Guid eventId, Guid endpointId)
     {
@@ -39,20 +41,22 @@ public class Delivery
 
     public void MarkAsDelivered()
     {
-        if (Status != DeliveryStatus.Pending)
+        if (Status != DeliveryStatus.Pending || AttemptCount == 0)
         {
-        throw new InvalidOperationException(
-            "Only pending deliveries can be marked as delivered.");
+            throw new InvalidOperationException(
+                "Only pending deliveries can be marked as delivered.");
         }
 
         Status = DeliveryStatus.Delivered;
+        NextAttemptAt = null;
     }
 
     public void RegisterAttempt()
     {
-        if(Status == DeliveryStatus.Pending)
+        if (Status == DeliveryStatus.Pending && AttemptCount < MaxAttempts)
         {
             AttemptCount++;
+            ScheduleNextAttempt(GetRetryDelay());
         }
         else
         {
@@ -74,14 +78,16 @@ public class Delivery
                 "Cannot register failure for this delivery.");
         }
 
-        if (AttemptCount >= maxAttempts)
+        if (AttemptCount >= Math.Min(maxAttempts, MaxAttempts))
         {
-            Status = DeliveryStatus.Failed;
+            MarkAsFailed();
         }
     }
 
     public void ScheduleNextAttempt(TimeSpan delay)
     {
+        if (delay < TimeSpan.Zero)
+            throw new ArgumentOutOfRangeException(nameof(delay));
         if (Status != DeliveryStatus.Pending)
         {
             throw new InvalidOperationException(
@@ -89,5 +95,16 @@ public class Delivery
         }
 
         NextAttemptAt = DateTimeOffset.UtcNow.Add(delay);
+    }
+
+    public TimeSpan GetRetryDelay() => TimeSpan.FromSeconds(5 * Math.Pow(2, Math.Max(0, AttemptCount - 1)));
+
+    public void MarkAsFailed()
+    {
+        if (Status != DeliveryStatus.Pending)
+            throw new InvalidOperationException("Only pending deliveries can fail.");
+
+        Status = DeliveryStatus.Failed;
+        NextAttemptAt = null;
     }
 }

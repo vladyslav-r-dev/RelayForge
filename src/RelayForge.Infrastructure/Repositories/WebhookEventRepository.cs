@@ -3,6 +3,8 @@ using RelayForge.Application.Interfaces;
 using RelayForge.Domain.Entities;
 using RelayForge.Infrastructure.Persistence;
 
+namespace RelayForge.Infrastructure.Repositories;
+
 public class WebhookEventRepository(RelayForgeDbContext context)
     : IWebhookEventRepository
 {

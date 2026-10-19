@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RelayForge.Domain.Entities;
 
 namespace RelayForge.Infrastructure.Persistence.Configurations;
+
 public class EndpointConfiguration : IEntityTypeConfiguration<Endpoint>
 {
     public void Configure(EntityTypeBuilder<Endpoint> builder)

@@ -1,5 +1,7 @@
 using RelayForge.Domain.Enums;
 
+namespace RelayForge.Application.Responses;
+
 public class DeliveryResponse
 {
     public Guid Id { get; set; }

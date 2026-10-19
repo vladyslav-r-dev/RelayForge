@@ -1,5 +1,8 @@
 using RelayForge.Application.Interfaces;
-    
+using RelayForge.Application.Responses;
+
+namespace RelayForge.Application.UseCases;
+
 public class GetEventDeliveriesUseCase(IDeliveryRepository deliveryRepository)
 {
     private readonly IDeliveryRepository _deliveryRepository = deliveryRepository;

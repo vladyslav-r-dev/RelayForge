@@ -1,6 +1,7 @@
 using RelayForge.Application.Interfaces;
 
 namespace RelayForge.Application.UseCases;
+
 public class DeactivateEndpointUseCase(IEndpointRepository endpointRepository, IUnitOfWork unitOfWork)
 {
     private readonly IEndpointRepository _endpointRepository = endpointRepository;

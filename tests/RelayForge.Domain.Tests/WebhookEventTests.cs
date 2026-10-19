@@ -8,13 +8,13 @@ public class WebhookEventTests
     [Fact]
     public void WebhookEvent_Should_Be_Created()
     {
-    var webhookEvent = new WebhookEvent(
-        "order.paid",
-        "{\"orderId\":123}"
-    );
+        var webhookEvent = new WebhookEvent(
+            "order.paid",
+            "{\"orderId\":123}"
+        );
 
-    Assert.Equal("order.paid", webhookEvent.EventType);
-    Assert.Equal("{\"orderId\":123}", webhookEvent.Data);
+        Assert.Equal("order.paid", webhookEvent.EventType);
+        Assert.Equal("{\"orderId\":123}", webhookEvent.Data);
     }
 
     [Fact]

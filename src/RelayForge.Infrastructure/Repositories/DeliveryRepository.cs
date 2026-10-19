@@ -1,11 +1,11 @@
+using Microsoft.EntityFrameworkCore;
+using RelayForge.Application.Interfaces;
 using RelayForge.Domain.Entities;
 using RelayForge.Domain.Enums;
-using RelayForge.Application.Interfaces;
 using RelayForge.Infrastructure.Persistence;
-using Microsoft.EntityFrameworkCore;
 
-namespace RelayForge.Infrastructure.Repositories
-{
+namespace RelayForge.Infrastructure.Repositories;
+
 public class DeliveryRepository(RelayForgeDbContext context) : IDeliveryRepository
 {
     private readonly RelayForgeDbContext _context = context;
@@ -27,12 +27,10 @@ public class DeliveryRepository(RelayForgeDbContext context) : IDeliveryReposito
     {
         return await _context.Deliveries
             .Where(d =>
-            d.Status == DeliveryStatus.Pending &&
-            (d.NextAttemptAt == null ||
-            d.NextAttemptAt <= DateTimeOffset.UtcNow))
+                d.Status == DeliveryStatus.Pending &&
+                (d.NextAttemptAt == null || d.NextAttemptAt <= DateTimeOffset.UtcNow))
             .OrderBy(d => d.CreatedAt)
             .Take(10)
             .ToListAsync(cancellationToken);
     }
-}
 }

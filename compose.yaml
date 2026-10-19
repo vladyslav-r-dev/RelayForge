@@ -1,13 +1,27 @@
 services:
+  api:
+    build: .
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ConnectionStrings__RelayForge: Host=postgres;Port=5432;Database=relayforge;Username=relayforge;Password=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+      Security__ApiKey: ${RELAYFORGE_API_KEY:?Set RELAYFORGE_API_KEY in .env}
+      Delivery__AllowedReceiverUrls__0: ${RELAYFORGE_RECEIVER_URL:?Set RELAYFORGE_RECEIVER_URL in .env}
+      Database__ApplyMigrations: "true"
+    ports:
+      - "127.0.0.1:${API_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
   postgres:
     image: postgres:17
-    container_name: relayforge-postgres
     environment:
       POSTGRES_DB: relayforge
       POSTGRES_USER: relayforge
-      POSTGRES_PASSWORD: relayforge_dev_password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
-      - "127.0.0.1:5433:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -15,6 +29,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
 
 volumes:
   postgres_data:

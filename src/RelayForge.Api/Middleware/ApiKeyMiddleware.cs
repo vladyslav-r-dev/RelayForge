@@ -1,54 +1,40 @@
-namespace RelayForge.Api.Middleware
+using System.Security.Cryptography;
+using System.Text;
+
+namespace RelayForge.Api.Middleware;
+
+public sealed class ApiKeyMiddleware
 {
-    public class ApiKeyMiddleware 
+    private readonly RequestDelegate _next;
+    private readonly byte[] _keyHash;
+
+    public ApiKeyMiddleware(RequestDelegate next, IConfiguration configuration)
     {
-        private readonly RequestDelegate _next;
-        private readonly IConfiguration _configuration;
-        private readonly ILogger<ApiKeyMiddleware> _logger;
+        _next = next;
+        var key = configuration["Security:ApiKey"];
+        if (string.IsNullOrWhiteSpace(key))
+            throw new InvalidOperationException("Security:ApiKey must be configured.");
+        _keyHash = SHA256.HashData(Encoding.UTF8.GetBytes(key));
+    }
 
-        public ApiKeyMiddleware(RequestDelegate next, IConfiguration configuration, ILogger<ApiKeyMiddleware> logger)
+    public async Task InvokeAsync(HttpContext context)
+    {
+        if (context.Request.Path.Equals("/health", StringComparison.OrdinalIgnoreCase))
         {
-            _next = next;
-            _configuration = configuration;
-            _logger = logger;
-        }
-
-        public async Task InvokeAsync(HttpContext context)
-        {
-            if (!context.Request.Path.StartsWithSegments("/events") &&
-                !context.Request.Path.StartsWithSegments("/endpoints"))
-            {
-                await _next(context);
-                return;
-            }
-
-            if (!context.Request.Headers.TryGetValue("X-Api-Key", out var extractedApiKey))
-            {
-                context.Response.StatusCode = 401;
-                await context.Response.WriteAsync("API Key is missing");
-                _logger.LogWarning("API Key is missing");
-                return;
-            }
-
-            var apiKey = _configuration["Security:ApiKey"];
-
-            if (string.IsNullOrWhiteSpace(apiKey))
-            {
-                throw new InvalidOperationException("API Key is not configured.");
-            }
-
-            if (!string.Equals(
-                apiKey,
-                extractedApiKey.ToString(),
-                StringComparison.Ordinal))
-            {
-                context.Response.StatusCode = 401;
-                await context.Response.WriteAsync("Unauthorized client");
-                _logger.LogWarning("Unauthorized client attempted to access with invalid API Key");
-                return;
-            }
-
             await _next(context);
+            return;
         }
+
+        if (!context.Request.Headers.TryGetValue("X-Api-Key", out var values) ||
+            values.Count != 1 || string.IsNullOrEmpty(values[0]) ||
+            !CryptographicOperations.FixedTimeEquals(_keyHash,
+                SHA256.HashData(Encoding.UTF8.GetBytes(values[0]!))))
+        {
+            context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+            await context.Response.WriteAsync("Unauthorized client", context.RequestAborted);
+            return;
+        }
+
+        await _next(context);
     }
 }

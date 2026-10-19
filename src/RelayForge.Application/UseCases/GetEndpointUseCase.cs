@@ -1,6 +1,8 @@
 using RelayForge.Application.Interfaces;
+using RelayForge.Application.Responses;
 
 namespace RelayForge.Application.UseCases;
+
 public class GetEndpointUseCase(IEndpointRepository endpointRepository)
 {
     private readonly IEndpointRepository _endpointRepository = endpointRepository;
@@ -10,7 +12,7 @@ public class GetEndpointUseCase(IEndpointRepository endpointRepository)
         var endpoint = await _endpointRepository.GetByIdAsync(id, cancellationToken);
         if (endpoint == null)
         {
-            throw new Exception("Endpoint not found");
+            throw new KeyNotFoundException("Endpoint not found.");
         }
 
         return new EndpointResponse

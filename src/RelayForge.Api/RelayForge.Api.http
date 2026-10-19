@@ -1,6 +1,22 @@
 @RelayForge.Api_HostAddress = http://localhost:5204
 
-GET {{RelayForge.Api_HostAddress}}/weatherforecast/
-Accept: application/json
+@ApiKey = REPLACE_LOCALLY_DO_NOT_COMMIT
+@ReceiverUrl = https://receiver.example/webhook
+
+GET {{RelayForge.Api_HostAddress}}/health
+
+###
+POST {{RelayForge.Api_HostAddress}}/endpoints
+X-Api-Key: {{ApiKey}}
+Content-Type: application/json
+
+{"url":"{{ReceiverUrl}}"}
+
+###
+POST {{RelayForge.Api_HostAddress}}/events
+X-Api-Key: {{ApiKey}}
+Content-Type: application/json
+
+{"eventType":"order.paid","data":"{\"orderId\":123}"}
 
 ###

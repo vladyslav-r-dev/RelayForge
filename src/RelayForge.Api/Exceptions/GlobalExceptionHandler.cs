@@ -27,7 +27,8 @@ public sealed class GlobalExceptionHandler(
 
         if (statusCode == StatusCodes.Status500InternalServerError)
         {
-            logger.LogError(exception, "Unhandled exception occurred");
+            logger.LogError("Unhandled exception ({ErrorType}), trace {TraceId}",
+                exception.GetType().Name, httpContext.TraceIdentifier);
         }
 
         httpContext.Response.StatusCode = statusCode;

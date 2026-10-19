@@ -1,0 +1,13 @@
+**/bin
+**/obj
+.git
+.vs
+.idea
+.env
+.env.*
+**/*.user
+**/*.pfx
+artifacts
+TestResults
+tests
+docs

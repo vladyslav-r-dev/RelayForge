@@ -1,0 +1,20 @@
+﻿root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+
+[*.cs]
+dotnet_sort_system_directives_first = true
+csharp_style_namespace_declarations = file_scoped:suggestion
+csharp_new_line_before_open_brace = all
+
+[*.{json,yml,yaml,csproj}]
+indent_size = 2
+
+[**/Migrations/*.cs]
+generated_code = true

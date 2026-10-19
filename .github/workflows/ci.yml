@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: relayforge
+          POSTGRES_DB: postgres
+          POSTGRES_PASSWORD: ci-only-disposable-password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U relayforge -d postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      RELAYFORGE_TEST_POSTGRES: Host=localhost;Port=5432;Database=postgres;Username=relayforge;Password=ci-only-disposable-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: dotnet restore RelayForge.sln
+      - run: dotnet build RelayForge.sln --configuration Release --no-restore
+      - run: dotnet test RelayForge.sln --configuration Release --no-build --logger trx

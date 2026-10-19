@@ -1,6 +1,7 @@
 using RelayForge.Domain.Entities;
 
 namespace RelayForge.Application.Interfaces;
+
 public interface IEndpointRepository
 {
     void Add(Endpoint endpoint, CancellationToken cancellationToken);

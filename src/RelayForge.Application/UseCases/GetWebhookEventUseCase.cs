@@ -1,6 +1,8 @@
 using RelayForge.Application.Interfaces;
+using RelayForge.Application.Responses;
 
 namespace RelayForge.Application.UseCases;
+
 public class GetWebhookEventUseCase(IWebhookEventRepository webhookEventRepository)
 {
     private readonly IWebhookEventRepository _webhookEventRepository = webhookEventRepository;

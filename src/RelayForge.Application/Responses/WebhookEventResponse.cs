@@ -1,3 +1,5 @@
+namespace RelayForge.Application.Responses;
+
 public class WebhookEventResponse
 {
     public Guid Id { get; set; }

@@ -20,6 +20,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\RelayForge.Domain\RelayForge.Domain.csproj" />
+    <ProjectReference Include="..\..\src\RelayForge.Api\RelayForge.Api.csproj" />
   </ItemGroup>
 
 </Project>
