@@ -6,9 +6,10 @@ public class Delivery
     public Guid Id { get; private set; }
     public Guid EventId { get; private set; }
     public Guid EndpointId { get; private set; }
-    public DeliveryStatus Status { get; private set; }
+    public DeliveryStatus Status { get;  set; }
     public DateTimeOffset CreatedAt { get; private set; }
     public int AttemptCount { get; private set; }
+    public DateTimeOffset? NextAttemptAt { get; private set; }
     
 
     public Delivery(Guid eventId, Guid endpointId)
@@ -33,6 +34,7 @@ public class Delivery
         Status = DeliveryStatus.Pending;
         AttemptCount = 0;
         CreatedAt = DateTimeOffset.UtcNow;
+        NextAttemptAt = null;
     }
 
     public void MarkAsDelivered()
@@ -76,5 +78,16 @@ public class Delivery
         {
             Status = DeliveryStatus.Failed;
         }
+    }
+
+    public void ScheduleNextAttempt(TimeSpan delay)
+    {
+        if (Status != DeliveryStatus.Pending)
+        {
+            throw new InvalidOperationException(
+                "Only pending deliveries can schedule the next attempt.");
+        }
+
+        NextAttemptAt = DateTimeOffset.UtcNow.Add(delay);
     }
 }

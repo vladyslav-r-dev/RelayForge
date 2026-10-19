@@ -17,6 +17,7 @@ public class DeliveryConfiguration : IEntityTypeConfiguration<Delivery>
         builder.Property(d => d.Status).IsRequired();
         builder.Property(d => d.AttemptCount).IsRequired();
         builder.Property(d => d.CreatedAt).IsRequired();
+        builder.Property(d => d.NextAttemptAt).IsRequired(false);
 
         builder.HasOne<WebhookEvent>()
             .WithMany(e => e.Deliveries)

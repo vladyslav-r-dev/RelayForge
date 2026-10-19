@@ -26,7 +26,10 @@ public class DeliveryRepository(RelayForgeDbContext context) : IDeliveryReposito
     public async Task<IEnumerable<Delivery>> GetPendingAsync(CancellationToken cancellationToken)
     {
         return await _context.Deliveries
-            .Where(d => d.Status == DeliveryStatus.Pending)
+            .Where(d =>
+            d.Status == DeliveryStatus.Pending &&
+            (d.NextAttemptAt == null ||
+            d.NextAttemptAt <= DateTimeOffset.UtcNow))
             .OrderBy(d => d.CreatedAt)
             .Take(10)
             .ToListAsync(cancellationToken);

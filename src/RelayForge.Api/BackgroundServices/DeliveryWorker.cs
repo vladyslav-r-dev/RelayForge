@@ -1,74 +1,68 @@
+
+using System.Net;
+using System.Net.Http.Json;
 using RelayForge.Application.Interfaces;
+using RelayForge.Domain.Entities;
+using RelayForge.Domain.Enums;
 
-namespace RelayForge.Api.BackgroundServices
-{
-    public class DeliveryWorker(ILogger<DeliveryWorker> logger,
+namespace RelayForge.Api.BackgroundServices;
+
+public class DeliveryWorker(
+    ILogger<DeliveryWorker> logger,
     IHttpClientFactory httpClientFactory,
-    IServiceScopeFactory serviceScopeFactory) : BackgroundService
+    IServiceScopeFactory scopeFactory) : BackgroundService
+{
+    private const int MaxAttempts = 3;
+    private static readonly TimeSpan PollingInterval = TimeSpan.FromSeconds(5);
+
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        readonly ILogger<DeliveryWorker> _logger = logger;
-        readonly IHttpClientFactory _httpClientFactory = httpClientFactory;
-        readonly IServiceScopeFactory _serviceScopeFactory = serviceScopeFactory;
-
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+        while (!stoppingToken.IsCancellationRequested)
         {
-            while (!stoppingToken.IsCancellationRequested)
+            try
             {
-                try
-                {
-
-                _logger.LogInformation("Starting delivery worker iteration");
-
-                using var scope = _serviceScopeFactory.CreateScope();
+                using var scope = scopeFactory.CreateScope();
 
                 var deliveryRepository = scope.ServiceProvider
                     .GetRequiredService<IDeliveryRepository>();
 
                 var eventRepository = scope.ServiceProvider
-                .GetRequiredService<IWebhookEventRepository>();
+                    .GetRequiredService<IWebhookEventRepository>();
 
-                 var endpointRepository = scope.ServiceProvider
-                .GetRequiredService<IEndpointRepository>();
+                var endpointRepository = scope.ServiceProvider
+                    .GetRequiredService<IEndpointRepository>();
 
-                var pendingDeliveries = await deliveryRepository
-                .GetPendingAsync(stoppingToken);
-
-                foreach (var delivery in pendingDeliveries)
-                {
-                    var endpoint = await endpointRepository.GetByIdAsync(delivery.EndpointId, stoppingToken);
-
-                    var webhookEvent = await eventRepository.GetByIdAsync(delivery.EventId, stoppingToken);
-
-
-                    if (endpoint == null)
-                    {
-                        _logger.LogWarning(
-                            "Endpoint with ID {EndpointId} not found for delivery {DeliveryId}",
-                            delivery.EndpointId,
-                            delivery.Id);
-                        continue;
-                    }
-                    if (webhookEvent == null)
-                    {
-                        _logger.LogWarning(
-                            "Webhook event with ID {WebhookEventId} not found for delivery {DeliveryId}",
-                            delivery.EventId,
-                            delivery.Id);
-                        continue;
-                    }
-
-                    var unitOfWork = scope.ServiceProvider
+                var unitOfWork = scope.ServiceProvider
                     .GetRequiredService<IUnitOfWork>();
+
+                var deliveries = await deliveryRepository
+                    .GetPendingAsync(stoppingToken);
+
+                foreach (var delivery in deliveries)
+                {
+                    var endpoint = await endpointRepository
+                        .GetByIdAsync(delivery.EndpointId, stoppingToken);
+
+                    var webhookEvent = await eventRepository
+                        .GetByIdAsync(delivery.EventId, stoppingToken);
+
+                    if (endpoint is null || webhookEvent is null)
+                    {
+                        logger.LogWarning(
+                            "Missing event or endpoint for delivery {DeliveryId}",
+                            delivery.Id);
+
+                        continue;
+                    }
 
                     delivery.RegisterAttempt();
                     await unitOfWork.SaveChangesAsync(stoppingToken);
 
-                    using var client = _httpClientFactory.CreateClient();
-
-                    client.Timeout = TimeSpan.FromSeconds(10);
-
                     try
                     {
+                        using var client = httpClientFactory.CreateClient();
+                        client.Timeout = TimeSpan.FromSeconds(10);
+
                         using var response = await client.PostAsJsonAsync(
                             endpoint.Url,
                             new
@@ -82,61 +76,103 @@ namespace RelayForge.Api.BackgroundServices
                         if (response.IsSuccessStatusCode)
                         {
                             delivery.MarkAsDelivered();
+
                             await unitOfWork.SaveChangesAsync(stoppingToken);
-                            _logger.LogInformation(
-                                "Webhook delivery {DeliveryId} succeeded",
-                                delivery.Id);
+
+                            logger.LogInformation(
+                                "Delivery {DeliveryId} succeeded on attempt {Attempt}",
+                                delivery.Id,
+                                delivery.AttemptCount);
+
+                            continue;
                         }
-                        else
-                        {
-                            _logger.LogWarning(
-                                "Webhook request failed: {StatusCode}",
-                                response.StatusCode);
-                            delivery.RegisterFailure(1);
-                            await unitOfWork.SaveChangesAsync(stoppingToken);
-                        }
+
+                        bool canRetry =
+                            response.StatusCode == HttpStatusCode.TooManyRequests ||
+                            (int)response.StatusCode >= 500;
+
+                        logger.LogWarning(
+                            "Delivery {DeliveryId} received HTTP {StatusCode}",
+                            delivery.Id,
+                            (int)response.StatusCode);
+
+                        await HandleFailureAsync(
+                            delivery,
+                            unitOfWork,
+                            canRetry ? MaxAttempts : 1,
+                            stoppingToken);
                     }
                     catch (HttpRequestException ex)
                     {
-                        _logger.LogError(ex, "Error occurred while sending webhook request");
-                        delivery.RegisterFailure(1);
-                        await unitOfWork.SaveChangesAsync(stoppingToken);
+                        logger.LogWarning(
+                            ex,
+                            "Network error for delivery {DeliveryId}",
+                            delivery.Id);
+
+                        await HandleFailureAsync(
+                            delivery,
+                            unitOfWork,
+                            MaxAttempts,
+                            stoppingToken);
                     }
                     catch (OperationCanceledException ex)
-                    when (!stoppingToken.IsCancellationRequested)
-                {
-                    _logger.LogWarning(
-                        ex,
-                        "Webhook delivery {DeliveryId} timed out",
-                        delivery.Id);
+                        when (!stoppingToken.IsCancellationRequested)
+                    {
+                        logger.LogWarning(
+                            ex,
+                            "Delivery {DeliveryId} timed out",
+                            delivery.Id);
 
-                    delivery.RegisterFailure(1);
-                    await unitOfWork.SaveChangesAsync(stoppingToken);
-                }
-                }
-                }
-                catch (OperationCanceledException)
-                    when (stoppingToken.IsCancellationRequested)
-                {
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(
-                        ex,
-                        "Unexpected error in DeliveryWorker");
-                }
-
-                try
-                {
-                    await Task.Delay(TimeSpan.FromSeconds(5), stoppingToken);
-                }
-                catch (OperationCanceledException)
-                    when (stoppingToken.IsCancellationRequested)
-                {
-                    break;
+                        await HandleFailureAsync(
+                            delivery,
+                            unitOfWork,
+                            MaxAttempts,
+                            stoppingToken);
+                    }
                 }
             }
+            catch (OperationCanceledException)
+                when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(
+                    ex,
+                    "Unexpected error in DeliveryWorker");
+            }
+
+            try
+            {
+                await Task.Delay(PollingInterval, stoppingToken);
+            }
+            catch (OperationCanceledException)
+                when (stoppingToken.IsCancellationRequested)
+            {
+                break;
+            }
         }
+    }
+
+    private static async Task HandleFailureAsync(
+        Delivery delivery,
+        IUnitOfWork unitOfWork,
+        int maxAttempts,
+        CancellationToken cancellationToken)
+    {
+        delivery.RegisterFailure(maxAttempts);
+
+        if (delivery.Status == DeliveryStatus.Pending)
+        {
+            double seconds = 5 * Math.Pow(
+                2,
+                delivery.AttemptCount - 1);
+
+            delivery.ScheduleNextAttempt(
+                TimeSpan.FromSeconds(seconds));
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellationToken);
     }
 }

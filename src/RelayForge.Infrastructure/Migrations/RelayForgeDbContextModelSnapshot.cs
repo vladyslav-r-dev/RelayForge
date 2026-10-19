@@ -17,7 +17,7 @@ namespace RelayForge.Infrastructure.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -39,6 +39,9 @@ namespace RelayForge.Infrastructure.Migrations
 
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("NextAttemptAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<int>("Status")
                         .HasColumnType("integer");
@@ -106,10 +109,15 @@ namespace RelayForge.Infrastructure.Migrations
                         .IsRequired();
 
                     b.HasOne("RelayForge.Domain.Entities.WebhookEvent", null)
-                        .WithMany()
+                        .WithMany("Deliveries")
                         .HasForeignKey("EventId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("RelayForge.Domain.Entities.WebhookEvent", b =>
+                {
+                    b.Navigation("Deliveries");
                 });
 #pragma warning restore 612, 618
         }
